@@ -1,0 +1,21 @@
+{
+  "name":"alone-webman/redis",
+  "type":"library",
+  "license":"MIT",
+  "version":"1.0.0",
+  "description":"原生redis",
+  "autoload":{
+    "psr-4":{
+      "AloneWebMan\\Redis\\":"src"
+    },
+    "files":[
+      "function.php"
+    ]
+  },
+  "require":{
+    "php":">=8.0"
+  },
+  "require-dev":{
+    "workerman/webman-framework":"^2.1"
+  }
+}
