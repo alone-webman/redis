@@ -10,7 +10,7 @@ class Facade {
     //选择数据库
     protected int $db = 0;
     //redis连接
-    public Redis $redis;
+    public Redis|null $redis = null;
     //配置
     public array $config = [
         //tcp tls ssl
@@ -56,6 +56,29 @@ class Facade {
     }
 
     /**
+     * @return static
+     */
+    public function connect(): static {
+        if (empty($this->redis) || !empty($this->update)) {
+            $this->redis();
+        }
+        $this->redis->select($this->db ?: 0);
+        return $this;
+    }
+
+    /**
+     * 关闭连接
+     * @return $this
+     */
+    public function close(): static {
+        if (!empty($this->redis)) {
+            $this->redis->close();
+            $this->redis = null;
+        }
+        return $this;
+    }
+
+    /**
      * 选择数据库
      * @param int $db
      * @return $this
@@ -91,7 +114,7 @@ class Facade {
      * @return bool|int
      */
     public function queueSet(string|int $key, mixed $val): bool|int {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->lpush($keys, $this->setValue($val));
     }
 
@@ -101,7 +124,7 @@ class Facade {
      * @return bool|string|int
      */
     public function queueGet(string|int $key): bool|string|int {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->rpop($keys);
     }
 
@@ -138,7 +161,7 @@ class Facade {
      * @return int
      */
     public function incrBy(string|int $key, int $value = 1): int {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->incrBy($keys, $value);
     }
 
@@ -149,7 +172,7 @@ class Facade {
      * @return int
      */
     public function decrBy(string|int $key, int $value = 1): int {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->decrBy($keys, $value);
     }
 
@@ -161,7 +184,7 @@ class Facade {
      * @return mixed
      */
     public function zAdd(string|int $key, mixed $val, int $time = 0): mixed {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->zadd($keys, ($time ?: time()), $this->setValue($val));
     }
 
@@ -172,7 +195,7 @@ class Facade {
      * @return array
      */
     public function zGet(string|int $key, int $time = 0): array {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->zrangebyscore($keys, '-inf', ($time ?: time()), ['WITHSCORES' => true]);
     }
 
@@ -209,7 +232,7 @@ class Facade {
      * @return mixed
      */
     public function zDel(string|int $key, mixed $val = null): mixed {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return ($val ? $this->redis->zrem($keys, $val) : $this->redis->del($keys));
     }
 
@@ -222,7 +245,7 @@ class Facade {
      * @return mixed
      */
     public function hSet(int|string $key, int|string $name, mixed $val, int $time = 0): mixed {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         $exists = true;
         if ($time > 0) {
             $exists = $this->exists($key);
@@ -242,7 +265,7 @@ class Facade {
      * @return mixed
      */
     public function hGet(int|string $key, int|string $name, mixed $def = ''): mixed {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->getValue($this->redis->hget($keys, $name), $def);
     }
 
@@ -253,7 +276,7 @@ class Facade {
      * @return Redis|int|bool
      */
     public function hDel(int|string $key, int|string $name = ''): Redis|int|bool {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $name ? $this->redis->hdel($keys, $name) : $this->redis->del($keys);
     }
 
@@ -265,7 +288,7 @@ class Facade {
      * @return mixed
      */
     public function set(string|int $key, mixed $val, int $time = 0): mixed {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         $res = $this->redis->set($keys, $this->setValue($val));
         if ($time > 0) {
             $this->expire($key, $time);
@@ -280,7 +303,7 @@ class Facade {
      * @return mixed
      */
     public function get(string|int $key, mixed $def = ''): mixed {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->getValue($this->redis->get($keys), $def);
     }
 
@@ -290,7 +313,7 @@ class Facade {
      * @return Redis|int|bool
      */
     public function del(string|int $key): Redis|int|bool {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->del($keys);
     }
 
@@ -301,7 +324,7 @@ class Facade {
      * @return mixed
      */
     public function expire(string|int $key, int $time): mixed {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->expire($keys, $time);
     }
 
@@ -311,7 +334,7 @@ class Facade {
      * @return mixed
      */
     public function exists(string|int $key): mixed {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->exists($keys);
     }
 
@@ -323,7 +346,7 @@ class Facade {
      * @return int
      */
     public function delete(string|int $key, bool $prefix = true, int $count = 0): int {
-        $this->conn();
+        $this->connect();
         $list = $this->redis->keys(($prefix ? $this->getKey($key) : $key) . ':*');
         if (!empty($list)) {
             foreach ($list as $item) {
@@ -366,7 +389,7 @@ class Facade {
      * @return mixed
      */
     public function setNx(string|int $key, int $time, mixed $val = 1): mixed {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->set($keys, $val, ['nx', 'ex' => $time]);
     }
 
@@ -380,7 +403,7 @@ class Facade {
      * @return mixed
      */
     public function lock(string|int $key, callable $callable, callable|bool $closure = false, int $timeout = 5, int $wait = 100): mixed {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         $startTime = time();
         while (true) {
             if ($this->setNx($key, $timeout)) {
@@ -407,7 +430,7 @@ class Facade {
      * @return bool|int
      */
     public function queueRightSet(string|int $key, mixed $val): bool|int {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->rpush($keys, $this->setValue($val));
     }
 
@@ -417,7 +440,7 @@ class Facade {
      * @return bool|string|int
      */
     public function queueRightGet(string|int $key): bool|string|int {
-        $keys = $this->conn()->getKey($key);
+        $keys = $this->connect()->getKey($key);
         return $this->redis->lpop($keys);
     }
 
@@ -469,6 +492,7 @@ class Facade {
         return $this->redis;
     }
 
+
     /**
      * 获取配置
      * @param string|int|null $key
@@ -479,16 +503,6 @@ class Facade {
         return static::getArr($this->config, $key, $default);
     }
 
-    /**
-     * @return static
-     */
-    protected function conn(): static {
-        if (empty($this->redis) || !empty($this->update)) {
-            $this->redis();
-        }
-        $this->redis->select($this->db ?: 0);
-        return $this;
-    }
 
     /**
      * 保存数据
@@ -559,5 +573,9 @@ class Facade {
             }
         }
         return $array ?? $default;
+    }
+
+    public function __destruct() {
+        $this->close();
     }
 }
