@@ -38,6 +38,49 @@ class Facade {
     ];
 
     /**
+     * 添加元素到 Set
+     * @param string|int $key   Redis key
+     * @param string|int $value 元素值
+     * @param int        $time  TTL（秒），0 表示不设置
+     * @param bool       $force 是否每次刷新 TTL
+     * @return bool true=新增, false=已存在
+     */
+    public function setVal(string|int $key, string|int $value, int $time = 0, bool $force = false): bool {
+        $keys = $this->connect()->getKey($key);
+        $added = $this->redis->sAdd($keys, $this->setValue($value));
+        $res = $added == 1;
+        if ($res && $time > 0) {
+            $ttl = $this->redis->ttl($keys);
+            if ($ttl < 0 || $force) {
+                $this->redis->expire($keys, $time);
+            }
+        }
+        return $res;
+    }
+
+    /**
+     * 获取 Set 中所有元素
+     * @param string|int $key Redis key
+     * @return array 元素数组，如果 key 不存在返回空数组
+     */
+    public function getVal(string|int $key): array {
+        $keys = $this->connect()->getKey($key);
+        $items = $this->redis->sMembers($keys);
+        return is_array($items) ? $items : [];
+    }
+
+    /**
+     * 判断元素是否存在于 Set
+     * @param string|int $key   Redis key
+     * @param string|int $value 元素值
+     * @return bool true=存在, false=不存在
+     */
+    public function isVal(string|int $key, string|int $value): bool {
+        $keys = $this->connect()->getKey($key);
+        return $this->redis->sIsMember($keys, $this->setValue($value)) === true;
+    }
+
+    /**
      * @param array $config
      */
     public function __construct(array $config = []) {
@@ -340,13 +383,16 @@ class Facade {
 
     /**
      * 删除key下面全部key
-     * @param string|int $key
-     * @param bool       $prefix 是否加前缀
-     * @param int        $count
+     * @param string|int|bool $key    true=全清空
+     * @param bool            $prefix 是否加前缀
+     * @param int             $count
      * @return int
      */
-    public function delete(string|int $key, bool $prefix = true, int $count = 0): int {
+    public function delete(string|int|bool $key, bool $prefix = true, int $count = 0): int {
         $this->connect();
+        if ($key === true) {
+            return $this->redis->flushDB() === true ? 1 : 0;
+        }
         $list = $this->redis->keys(($prefix ? $this->getKey($key) : $key) . ':*');
         if (!empty($list)) {
             foreach ($list as $item) {
