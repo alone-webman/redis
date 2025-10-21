@@ -153,9 +153,9 @@ class Facade {
     /**
      * 队列数量
      * @param string|int $key
-     * @return bool|string|int
+     * @return int
      */
-    public function queueCount(string|int $key): bool|string|int {
+    public function queueCount(string|int $key): int {
         $keys = $this->connect()->getKey($key);
         $len = $this->redis->lLen($keys);
         return is_numeric($len) && $len > 0 ? $len : 0;
