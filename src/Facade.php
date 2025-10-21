@@ -151,6 +151,17 @@ class Facade {
     }
 
     /**
+     * 队列数量
+     * @param string|int $key
+     * @return bool|string|int
+     */
+    public function queueCount(string|int $key): bool|string|int {
+        $keys = $this->connect()->getKey($key);
+        $len = $this->redis->lLen($keys);
+        return is_numeric($len) && $len > 0 ? $len : 0;
+    }
+
+    /**
      * 设置 左侧队列
      * @param string|int $key
      * @param mixed      $val
