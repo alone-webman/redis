@@ -183,6 +183,17 @@ class Facade {
     }
 
     /**
+     * @param string|int $key
+     * @param int        $index 获取第几个,从1起
+     * @return bool|string|int
+     */
+    public function lIndex(string|int $key, int $index): bool|string|int {
+        $keys = $this->connect()->getKey($key);
+        return $this->redis->lindex($keys, $index);
+    }
+
+
+    /**
      * 处理 左入右出 队列
      * @param string|int    $key
      * @param int           $int      获取数量
@@ -251,6 +262,17 @@ class Facade {
     public function zGet(string|int $key, int $time = 0): array {
         $keys = $this->connect()->getKey($key);
         return $this->redis->zrangebyscore($keys, '-inf', ($time ?: time()), ['WITHSCORES' => true]);
+    }
+
+    /**
+     * @param string|int $key
+     * @param int        $index 获取第几个,从1起
+     * @return array|null
+     */
+    public function zIndex(string|int $key, int $index): ?array {
+        $keys = $this->connect()->getKey($key);
+        $items = $this->redis->zRange($keys, $index - 1, $index - 1, true);
+        return (is_array($items) && !empty($item = $key($items))) ? ['key' => $item, 'value' => $items[$item]] : null;
     }
 
     /**
