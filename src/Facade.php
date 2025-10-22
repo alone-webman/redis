@@ -272,7 +272,7 @@ class Facade {
     public function zIndex(string|int $key, int $index): ?array {
         $keys = $this->connect()->getKey($key);
         $items = $this->redis->zRange($keys, $index - 1, $index - 1, true);
-        return (is_array($items) && !empty($item = $key($items))) ? ['key' => $item, 'value' => $items[$item]] : null;
+        return (is_array($items) && !empty($item = key($items))) ? ['key' => $item, 'value' => $items[$item]] : null;
     }
 
     /**
