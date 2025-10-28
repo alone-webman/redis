@@ -223,9 +223,9 @@ class Facade {
      * 自增 可增大数
      * @param string|int $key
      * @param int        $value
-     * @return int
+     * @return int|float
      */
-    public function incrBy(string|int $key, int $value = 1): int {
+    public function incrBy(string|int $key, int $value = 1): int|float {
         $keys = $this->connect()->getKey($key);
         return $this->redis->incrBy($keys, $value);
     }
@@ -234,9 +234,9 @@ class Facade {
      * 自减 可增减数
      * @param string|int $key
      * @param int        $value
-     * @return int
+     * @return int|float
      */
-    public function decrBy(string|int $key, int $value = 1): int {
+    public function decrBy(string|int $key, int $value = 1): int|float {
         $keys = $this->connect()->getKey($key);
         return $this->redis->decrBy($keys, $value);
     }
