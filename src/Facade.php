@@ -254,6 +254,35 @@ class Facade {
     }
 
     /**
+     * 原子增减 Redis 余额（高并发安全，HINCRBYFLOAT 浮点原生）
+     * @param string $key      Redis hash key
+     * @param string $field    Hash 字段名,可以使用会员号
+     * @param float  $amount   正数加/负数扣/0返回当前余额
+     * @param int    $multiple 转换倍数
+     * @return float|null    成功返回当前余额，失败返回 null
+     */
+    public function balance(string $key, string $field, float $amount = 0, int $multiple = 1000000): ?float {
+        $keys = $this->connect()->getKey($key);
+        if ($amount == 0) {
+            $cur = $this->redis->hGet($keys, $field) ?? 0;
+            return (float) ($cur / $multiple);
+        }
+        $result = $this->redis->eval(<<<LUA
+local key = KEYS[1]
+local field = ARGV[1]
+local amount = tonumber(ARGV[2])
+local cur = redis.call("HGET", key, field)
+if not cur then cur = "0" end
+cur = tonumber(cur)
+if amount < 0 and cur + amount < 0 then
+    return -1
+end
+return redis.call("HINCRBY", key, field, amount)
+LUA, [$keys, $field, (int) ($amount * $multiple)], 1);
+        return $result === -1 ? null : ((float) ($result / $multiple));
+    }
+
+    /**
      * 获取 有序列表
      * @param string|int $key
      * @param int        $time
