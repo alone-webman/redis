@@ -24,15 +24,16 @@ function alone_redis_client(array $config): Facade {
 }
 
 /**
- * @param string $key      Redis hash key
- * @param string $field    Hash 字段名
- * @param float  $amount   正数加/负数扣/0返回当前余额
- * @param int    $multiple 转换倍数
+ * @param string        $key      Redis hash key
+ * @param string        $field    Hash 字段名
+ * @param float         $amount   正数加/负数扣/0返回当前余额
+ * @param int           $multiple 转换倍数
+ * @param callable|null $callback
  * @return float|null    成功返回当前余额，失败返回 null
  * @return float|null
  */
-function alone_redis_balance(string $key, string $field, float $amount = 0, int $multiple = 1000000): ?float {
-    return alone_redis()->balance($key, $field, $amount, $multiple);
+function alone_redis_balance(string $key, string $field, float $amount = 0, int $multiple = 1000000, callable|null $callback = null): ?float {
+    return alone_redis()->balance($key, $field, $amount, $multiple, $callback);
 }
 
 /**
